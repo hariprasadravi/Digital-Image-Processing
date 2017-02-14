@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.8)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+project( p2_SURF )
+find_package( OpenCV REQUIRED )
+add_executable( p2_SURF p2_SURF.cpp )
+include_directories(${OpenCV_INCLUDE_DIRS})
+target_link_libraries( p2_SURF ${OpenCV_LIBS} )

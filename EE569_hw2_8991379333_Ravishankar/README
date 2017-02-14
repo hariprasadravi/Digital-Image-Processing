@@ -1,0 +1,113 @@
+# EE569 Homework Assignment #2
+# Date:     Oct 9, 2016
+# Name:     Hariprasad Ravishankar
+# ID:       8991379333
+# Email:    hravisha@usc.edu
+
+OBJS = p1_spatial_warping p1_puzzle_matching p1_homographic_transformation p2_dithering p2_four_level_dithering p2_floyd_steinberg p2_JJN p2_stucki p3_binarize_rice p3_count_grains p3_categorize_grains p3_hole_filling p3_shape_thinning p3_shape_skeletonizing p3_shape_classifier
+CC = g++
+
+
+all: prob1a prob1b prob1c prob2a prob2b prob3a prob3b
+
+prob1a:
+	@echo " Spatial Warping of Kitten_1 and Kitten_2 Images "
+	$(CC) -o p1_spatial_warping p1_spatial_warping.cpp -std=c++11;
+	@echo " Usage: ./p1_spatial_warping input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256]"
+	./p1_spatial_warping Kitten_1.raw Kitten_1_warped.raw 3 300 300
+	./p1_spatial_warping Kitten_2.raw Kitten_2_warped.raw 3 300 300
+
+prob1b:
+	@echo " Puzzle Matching "
+	$(CC) -o p1_puzzle_matching p1_puzzle_matching.cpp -std=c++11
+	@echo " Usage: ./p1_puzzle_matching input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256] [Puzzle Image] [Width = 256] [Height = 256]"
+	./p1_puzzle_matching piece.raw complete_Hillary.raw 3 500 500 Hillary.raw 512 512
+	./p1_puzzle_matching piece.raw complete_Trump.raw 3 500 500 Trump.raw 512 512
+	
+prob1c:
+	@echo " Homographic Transformation "
+	$(CC) -o p1_homographic_transformation p1_homographic_transformation.cpp -std=c++11
+	@echo " Usage: ./p1_homographic_transformation input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256] [Logo Image] [Width = 256] [Height = 256]"
+	./p1_homographic_transformation field.raw tartans_field.raw 3 972 648 tartans.raw 350 146
+	./p1_homographic_transformation field.raw trojans_field.raw 3 972 648 trojans.raw 350 146
+
+prob2a:
+	@echo " Halftoning using Dithering Index Matrix "
+	$(CC) -o p2_dithering p2_dithering.cpp -std=c++11
+	@echo " Usage: ./p2_dithering input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256] [N- enter 0 for A4]"
+	./p2_dithering house.raw dithered_house_4.raw 1 512 512 4
+	
+	@echo " 4 Gray Intensity Level Dithering "
+	$(CC) -o p2_four_level_dithering p2_four_level_dithering.cpp -std=c++11
+	@echo " Usage: ./p2_four_level_dithering input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256] [N- enter 0 for A4]"
+	./p2_four_level_dithering house.raw dithered_house_4_gray_levels.raw 1 512 512 4
+
+prob2b:
+	@echo " Halftoning based on Floyd - Steinberg Error Diffusion "
+	$(CC) -o p2_floyd_steinberg p2_floyd_steinberg.cpp -std=c++11
+	@echo " Usage: ./p2_floyd_steinberg input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256]"
+	./p2_floyd_steinberg house.raw house_floyd.raw 1 512 512
+
+	@echo " Halftoning based on JJN Error Diffusion "
+	$(CC) -o p2_JJN p2_JJN.cpp -std=c++11
+	@echo " Usage: ./p2_JJN input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256]"
+	./p2_JJN house.raw house_JJN.raw 1 512 512
+
+	@echo " Halftoning based on Stucki Error Diffusion "
+	$(CC) -o p2_stucki p2_stucki.cpp -std=c++11
+	@echo " Usage: ./p2_stucki input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256]"
+	./p2_stucki house.raw house_stucki.raw 1 512 512
+
+prob3a:
+	@echo " Binarizing Rice "
+	$(CC) -o p3_binarize_rice p3_binarize_rice.cpp -std=c++11
+	@echo " Usage: ./p3_binarize_rice input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256]"
+	./p3_binarize_rice Rice.raw Rice_binary.raw 3 690 500
+
+	@echo " Shrinking and Counting grains "
+	$(CC) -o p3_count_grains p3_count_grains.cpp -std=c++11
+	@echo " Usage: ./p3_count_grains input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256]"
+	./p3_count_grains Rice_binary.raw Rice_shrunk.raw 1 690 500
+
+	@echo " Finding Length and Categorizing "
+	$(CC) -o p3_categorize_grains p3_categorize_grains.cpp -std=c++11
+	@echo " Usage: ./p3_categorize_grains input_image.raw [Width = 256] [Height = 256]"
+	./p3_categorize_grains Rice_binary.raw 690 500
+
+prob3b:
+	@echo " Hole filling of Butterfly "
+	$(CC) -o p3_hole_filling p3_hole_filling.cpp -std=c++11
+	@echo " Usage: ./p3_hole_filling input_image.raw output_image.raw [Width = 256] [Height = 256]"
+	./p3_hole_filling Butterfly.raw Butterfly_temp.raw 335 320
+	./p3_hole_filling Butterfly_temp.raw Butterfly_binary.raw 335 320
+
+	@echo " Hole filling of Fly "
+	./p3_hole_filling Fly.raw Fly_binary.raw 222 223
+
+	@echo " Hole filling of Probe "
+	./p3_hole_filling Probe.raw Probe_binary.raw 496 502
+
+	@echo " Thinning Butterfly, Fly and Probe "
+	$(CC) -o p3_shape_thinning p3_shape_thinning.cpp -std=c++11
+	@echo " Usage: ./p3_shape_thinning input_image.raw output_image.raw [Width = 256] [Height = 256]"
+	./p3_shape_thinning Butterfly_binary.raw Butterfly_thinning.raw 335 320
+	./p3_shape_thinning Fly_binary.raw Fly_thinning.raw 222 223
+	./p3_shape_thinning Probe_binary.raw Probe_thinning.raw 496 502
+
+	@echo " Skeletonizing Butterfly, Fly and Probe "
+	$(CC) -o p3_shape_skeletonizing p3_shape_skeletonizing.cpp -std=c++11
+	@echo " Usage: ./p3_shape_skeletonizing input_image.raw output_image.raw [Width = 256] [Height = 256]"
+	./p3_shape_skeletonizing Butterfly_binary.raw Butterfly_skeleton.raw 335 320
+	./p3_shape_skeletonizing Fly_binary.raw Fly_skeleton.raw 222 223
+	./p3_shape_skeletonizing Probe_binary.raw Probe_skeleton.raw 496 502
+
+	@echo " Classifying Probe Image "
+	$(CC) -o p3_shape_classifier p3_shape_classifier.cpp -std=c++11
+	@echo " Usage: ./p3_shape_classifier input_image1_thinning.raw input_image1_skeleton.raw [Width = 256] [Height = 256] input_image2_thinning.raw input_image2_skeleton.raw [Width = 256] [Height = 256] probe_thinning.raw probe_skeleton.raw [Width = 256] [Height = 256]"
+	./p3_shape_classifier Butterfly_thinning.raw Butterfly_skeleton.raw 335 320 Fly_thinning.raw Fly_skeleton.raw 222 223 Probe_thinning.raw Probe_skeleton.raw 496 502
+
+
+
+
+clean:
+	rm -rf $(OBJS)

@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.8)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+project( p2c_BoW )
+find_package( OpenCV REQUIRED )
+add_executable( p2c_BoW p2c_BoW.cpp )
+include_directories(${OpenCV_INCLUDE_DIRS})
+target_link_libraries( p2c_BoW ${OpenCV_LIBS} )

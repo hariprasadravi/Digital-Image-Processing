@@ -1,0 +1,90 @@
+# EE569 Homework Assignment #1
+# Date:     Sep 18, 2016
+# Name:     Hariprasad Ravishankar
+# ID:       8991379333
+# Email:    hravisha@usc.edu
+
+OBJS = p1_cropping_resizing p1_RGB2CMY p1_RGB2HSL p2_histogram_equalization_methodA p2_histogram_equalization_methodB p2_Special_Effect p2_histogram_matching_gaussian p3_mean_filter p3_median_filter p3_NLM p3_PSNR
+CC = g++
+
+
+all: prob1a prob1b prob1c prob2a prob2b prob2c prob2d prob2e prob2f prob3a prob3b prob3c prob3d
+
+prob1a:
+	@echo " Cropping and Resizing "
+	$(CC) -o p1_cropping_resizing p1_cropping_resizing.cpp
+	@echo " Usage: ./p1_cropping_resizing input_image.raw cropped_image.raw resized_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256] [x1] [y1] [x2] [y2] [Resize]"
+	./p1_cropping_resizing Anna.raw Anna_cropped.raw Anna_resized.raw 3 250 300 55 85 184 214 300
+
+prob1b:
+	@echo " RGB to CMY "
+	$(CC) -o p1_RGB2CMY p1_RGB2CMY.cpp
+	@echo " Usage: ./p1_RGB2CMY input_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256]"
+	./p1_RGB2CMY Clownfish.raw 3 600 400
+	
+prob1c:
+	@echo " RGB to HSL "
+	$(CC) -o p1_RGB2HSL p1_RGB2HSL.cpp
+	@echo " Usage: ./p1_RGB2HSL input_image.raw H_image.raw S_image.raw L_image.raw [BytesPerPixel = 1] [width = 256] [Height = 256]"
+	./p1_RGB2HSL Turtle.raw Turtle_H.raw Turtle_S.raw Turtle_L.raw 3 400 250
+
+prob2a:
+	@echo " Histogram Equalization using Method A "
+	$(CC) -o p2_histogram_equalization_methodA p2_histogram_equalization_methodA.cpp
+	@echo " Usage: ./p2_histogram_equalization_methodA input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height= 256]"
+	./p2_histogram_equalization_methodA Beach_bright.raw Beach_bright_A.raw 1 500 375
+
+prob2b:
+	@echo " Histogram Equalization using Method B "
+	$(CC) -o p2_histogram_equalization_methodB p2_histogram_equalization_methodB.cpp
+	@echo " Usage: ./p2_histogram_equalization_methodB input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height= 256]"
+	./p2_histogram_equalization_methodB Beach_bright.raw Beach_bright_B.raw 1 500 375
+
+prob2c:
+	@echo " Histogram Equalization of Skyline using Method A "
+	@echo " Usage: ./p2_histogram_equalization_methodA input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height= 256]"
+	./p2_histogram_equalization_methodA Skyline.raw Skyline_A.raw 3 600 400
+
+prob2d:
+	@echo " Histogram Equalization of Skyline using Method B "
+	@echo " Usage: ./p2_histogram_equalization_methodB input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height= 256]"
+	./p2_histogram_equalization_methodB Skyline.raw Skyline_B.raw 3 600 400
+
+prob2e:
+	@echo " Skyline Special Effect "
+	$(CC) -o p2_Special_Effect p2_Special_Effect.cpp -std=c++11
+	@echo " Usage: ./p2_Special_Effect Reference_image [BytesPerPixel = 1] [Width = 256] [Height= 256] input_image [BytesPerPixel = 1] [Width = 256] [Height= 256] output_image"
+	./p2_Special_Effect Skyline.raw 3 600 400 Trojan.raw 3 450 300 Trojan_Special_effect.raw
+
+prob2f:
+	@echo " Histogram Matching to Gaussian "
+	$(CC) -o p2_histogram_matching_gaussian p2_histogram_matching_gaussian.cpp
+	@echo " Usage: ./p2_histogram_matching_gaussian input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256]"
+	./p2_histogram_matching_gaussian Student_1.raw Student_1_gaussian.raw 1 500 332
+
+prob3a:
+	@echo " Mean Filter "
+	$(CC) -o p3_mean_filter p3_mean_filter.cpp
+	@echo " Usage: ./p3_mean_filter input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256]"
+	./p3_mean_filter Lena_noisy.raw Lena_mean_filter.raw 3 512 512
+
+prob3b:
+	@echo " Median Filter "
+	$(CC) -o p3_median_filter p3_median_filter.cpp
+	@echo " Usage: ./p3_median_filter input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256]"
+	./p3_median_filter Lena_noisy.raw Lena_median_filter.raw 3 512 512
+
+prob3c:
+	@echo " Non-Local Means "
+	$(CC) -o p3_NLM p3_NLM.cpp
+	@echo " Usage: ./p3_NLM input_image.raw output_image.raw [BytesPerPixel = 1] [Width = 256] [Height =256]"
+	./p3_NLM Lena_noisy.raw Lena_NLM.raw 3 512 512
+
+prob3d:
+	@echo " PSNR "
+	$(CC) -o p3_PSNR p3_PSNR.cpp
+	@echo " Usage: ./p3_PSNR Original_image.raw Noisy_image.raw [BytesPerPixel = 1] [Width = 256] [Height = 256]"
+	./p3_PSNR Lena.raw Lena_NLM.raw 3 512 512
+
+clean:
+	rm -rf $(OBJS)

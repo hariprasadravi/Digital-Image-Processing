@@ -1,0 +1,784 @@
+
+// EE569 Homework Assignment #3
+// Date:     Nov 6, 2016
+// Name:     Hariprasad Ravishankar
+// ID:       8991379333
+// Email:    hravisha@usc.edu
+
+
+#include <opencv2/opencv.hpp>
+#include <stdio.h>
+#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+
+using namespace cv;
+using namespace std;
+
+Mat PerformFiltering(Mat Image,Mat filter){
+    // Boundary extension
+    Mat filtered_image = Mat(Image.rows,Image.cols,CV_32FC1,Scalar(0));
+    Mat extended_image;
+    copyMakeBorder(Image,extended_image,2,2,2,2,BORDER_REFLECT_101);
+
+    // convert from unsigned char to float
+    filter.convertTo(filter,CV_32FC1);
+    for(int i=2;i<(extended_image.rows-2);i++){
+        for(int j=2;j<(extended_image.cols-2);j++){
+
+            // Copy 5x5 moving window
+            Mat window = extended_image(cv::Rect(j-2,i-2,5,5)).clone();
+            window.convertTo(window,CV_32FC1);
+            
+            // Compute product
+            float prod = (sum(window.mul(filter))[0]);
+            
+            filtered_image.at<float>(i-2,j-2) = (prod);
+
+        }
+    }
+    
+    filtered_image.convertTo(filtered_image,CV_8UC1);
+    return filtered_image;
+
+}
+
+// --------------------------------------------------------------------------------------------------------------------------
+int main(int argc, char *argv[])
+
+{
+    // Define file pointer and variables
+    FILE *file;
+    int NumberOfImages =12;
+    int Size = 128;
+    string filename;
+
+    // Allocate image data array
+    unsigned char Imagedata[NumberOfImages][Size][Size];
+
+
+
+    // Read image (filename specified by first argument) into image data matrix
+    cv::Scalar temp;
+    vector<Mat> Images(12);
+  
+
+    // Read all 12 Texture Images
+    for(int i=1;i<13;i++){
+    	Images[i-1].create(Size,Size, CV_8UC1);
+        filename = "Texture"+ to_string(i) +".raw";
+        file=fopen(filename.c_str(),"rb");
+        fread(Imagedata[i-1], sizeof(unsigned char), Size*Size, file);
+        fclose(file);
+        memcpy(Images[i-1].data,Imagedata[i-1],Size*Size);
+
+
+        // Remove DC component for every input image
+        temp=cv::mean(Images[i-1]);
+        Images[i-1] -=temp;
+
+ 
+    }	
+
+
+    // Define Kernels
+    vector<vector<float> > mask ={
+    	{1,4,6,4,1},
+    	{-1,-2,0,2,1},
+    	{-1,0,2,0,-1},
+    	{-1,2,0,-2,1},
+    	{1,-4,6,-4,1},
+    };
+
+    // 25 vectors for 25 filters
+	vector<Mat> filters(25);
+	Mat A,B,B_t;
+	A = Mat(5,1,CV_32FC1,Scalar(0));
+	A.copyTo(B);
+	Mat prod(5,5,CV_32FC1,Scalar(0));
+	int level =0;
+
+	// constructing all possible filters ----------------------------------------------------------------------------
+
+    for(int i=0;i<5;i++){
+    	
+    	memcpy(A.data, mask[i].data(), 5*sizeof(float));
+
+    	for(int j=0;j<5;j++){
+    		memcpy(B.data, mask[j].data(), 5*sizeof(float));
+    		B_t=B.t();
+    		filters[level] = A*B.t();
+    		level++;
+    		
+    	}
+
+    }
+
+    float feature_vector[12][25];
+
+    // filtering using the masks --------------------------------------------------------------------------------------------
+    Mat dst;
+    for(int i=0;i<12;i++){
+    	for(int j=0;j<25;j++){
+
+            // Call function to perform filtering 
+    		dst = PerformFiltering(Images[i],filters[j]); 
+
+            // Compute Energy of the filtered output
+    		temp =(cv::sum(dst.mul(dst)))/float(Size *Size);
+
+            // Save energ in 2D vector
+    		feature_vector[i][j] = float(temp[0]);
+
+    	}
+
+
+    }
+    //--------------------------------------------------------------------------------------------------------------------------
+    // normalize feature matrix
+    Mat features = Mat(12,25,CV_32FC1,feature_vector);
+
+    Mat min,max;
+
+    // Compute column-wise max and min
+    reduce(features,min,0,CV_REDUCE_MIN,-1);
+    reduce(features,max,0,CV_REDUCE_MAX,-1);
+
+    // Normalizing
+    for(int i=0;i<12;i++){
+    	features.row(i) = (features.row(i) - min)/(max - min);
+    }
+
+    // Implement PCA --------------------------------------------------------------------------------------------------------------
+    Mat output_features;
+    PCA pca_analysis(features, Mat(), CV_PCA_DATA_AS_ROW,3);
+    pca_analysis.project(features,output_features);
+
+    // implement K-means -------------------------------------------------------------------------------------------------
+    Mat labels,centers;
+    kmeans(output_features, 4, labels,
+            TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 30000, 0.00001),
+               10, KMEANS_RANDOM_CENTERS, centers);
+
+
+    cout<<"Printing the labels"<<endl;
+    cout<<labels<<endl;
+
+
+    return 0;
+}
+
+
+// EE569 Homework Assignment #3
+// Date:     Nov 6, 2016
+// Name:     Hariprasad Ravishankar
+// ID:       8991379333
+// Email:    hravisha@usc.edu
+
+
+#include <opencv2/opencv.hpp>
+#include <stdio.h>
+#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+
+using namespace cv;
+using namespace std;
+
+
+// Function to compute energy of all pixels in a filtered image
+vector<double> GetFeatures(Mat filtered_image, int windowSize){
+    vector<double> energy;
+    Mat extended_image;
+    copyMakeBorder(filtered_image,extended_image,windowSize/2,windowSize/2,windowSize/2,windowSize/2,BORDER_REFLECT_101);
+    for(int i=windowSize/2;i<extended_image.rows -windowSize/2;i++){
+        for(int j=windowSize/2;j<extended_image.cols-windowSize/2;j++){
+            Mat window = extended_image(cv::Rect(j-windowSize/2,i-windowSize/2,windowSize,windowSize)).clone();
+            
+            window.convertTo(window,CV_32FC1);
+
+            energy.push_back(sum(window.mul(window))[0]/(float)windowSize*windowSize);
+        }
+    }
+
+    return energy;
+}
+// -------------------------------------------------------------------------------------------------------------------------------
+
+// Function to perform filtering
+Mat PerformFiltering(Mat Image,Mat filter){
+    // Boundary extension
+    Mat filtered_image = Mat(Image.rows,Image.cols,CV_32FC1,Scalar(0));
+    Mat extended_image;
+    copyMakeBorder(Image,extended_image,2,2,2,2,BORDER_REFLECT_101);
+
+
+    //Convert from unsigned char to float for computation
+    filter.convertTo(filter,CV_32FC1);
+    for(int i=2;i<(extended_image.rows-2);i++){
+        for(int j=2;j<(extended_image.cols-2);j++){
+
+        	// Copy a moving 5x5 window
+            Mat window = extended_image(cv::Rect(j-2,i-2,5,5)).clone();
+            window.convertTo(window,CV_32FC1);
+            
+
+            // Perform convolution
+            double prod = (sum(window.mul(filter))[0]);
+            
+            filtered_image.at<float>(i-2,j-2) = (prod);
+
+        }
+    }
+    
+    filtered_image.convertTo(filtered_image,CV_8UC1);
+    return filtered_image;
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------
+int main(int argc, char *argv[])
+
+{
+    // Define file pointer and variables
+    FILE *file;
+
+    int BytesPerPixel = 3;
+    int Sizeh = 256;
+    int Sizew = 256;
+
+
+    // Check for proper syntax
+    if (argc < 5){
+        cout << "Syntax Error - Incorrect Parameter Usage:" << endl;
+        cout << "program_name input_image.raw [BytesPerPixel] [Width = 256] [Height = 256]" << endl;
+        return 0;
+    }
+    
+  
+    BytesPerPixel = atoi(argv[2]);
+    Sizew = atoi(argv[3]);
+    Sizeh = atoi(argv[4]);
+
+    // Allocate image data array
+    unsigned char Imagedata[Sizeh][Sizew];
+
+    // Read image (filename specified by first argument) into image data matrix
+    if (!(file=fopen(argv[1],"rb"))) {
+        cout << "Cannot open file: " << argv[1] <<endl;
+        exit(1);
+    }
+    fread(Imagedata, sizeof(unsigned char), Sizew*Sizeh, file);
+    fclose(file);
+    
+    // --------------------------------------------------------------------------------------------------
+    Mat Image = Mat(Sizeh,Sizew,CV_8UC1,cv::Scalar(0));
+    memcpy(Image.data,Imagedata,Sizeh*Sizew);
+
+    // Remove DC component
+    Image = Image - cv::mean(Image);
+    
+    // Define filter kernels
+    vector<vector<float> > mask ={
+    	{1,4,6,4,1},
+    	{-1,-2,0,2,1},
+    	{-1,0,2,0,-1},
+    	{-1,2,0,-2,1},
+    	{1,-4,6,-4,1},
+    };
+
+    // 25 filters as vectors
+	vector<Mat> filters(25);
+	Mat A,B,B_t;
+	A = Mat(5,1,CV_32FC1,Scalar(0));
+	A.copyTo(B);
+	Mat prod(5,5,CV_32FC1,Scalar(0));
+	int level =0;
+
+	// constructing all possible filters ----------------------------------------------------------------------------
+
+    for(int i=0;i<5;i++){
+    	
+    	memcpy(A.data, mask[i].data(), 5*sizeof(float));
+
+    	for(int j=0;j<5;j++){
+    		memcpy(B.data, mask[j].data(), 5*sizeof(float));
+    		B_t=B.t();
+    		filters[level] = A*B.t();
+    		level++;
+    		
+    	}
+
+    }
+
+    // filtering using the masks --------------------------------------------------------------------------------------------
+    Mat dst;
+    Mat filtered_image;
+    vector<vector<double> > features;
+	for(int j=0;j<25;j++){
+
+        // Perform filtering of the image
+
+	    filtered_image = PerformFiltering(Image,filters[j]);
+
+
+	    // Save the filtered image
+        imwrite("Filtered_Image_" + to_string(j) + ".jpg", filtered_image);
+
+
+        // compute energy feature for every pixel as linear vector
+        features.push_back(GetFeatures(filtered_image,49));
+	}
+
+
+	// Copy feature vector to mat file
+    Mat feature_matrix = Mat(Sizew*Sizeh,25,CV_32FC1);
+
+    for(int i=0;i<Sizeh*Sizew;i++){
+        for(int j=0;j<25;j++){
+            feature_matrix.at<float>(i,j) = features[j][i];
+        }
+    }
+
+    features.clear();
+
+    //--------------------------------------------------------------------------------------------------------------------------
+    // normalize feature matrix
+    
+    Mat min,max;
+
+    // Compute column-wise min and max
+    reduce(feature_matrix,min,0,CV_REDUCE_MIN,-1);
+    reduce(feature_matrix,max,0,CV_REDUCE_MAX,-1);
+
+    // Normalize
+    for(int i=0;i<feature_matrix.rows;i++){
+    	feature_matrix.row(i) = (feature_matrix.row(i) - min)/(max - min);
+    }
+
+
+    // Implement PCA --------------------------------------------------------------------------------------------------------------
+    Mat output_features;
+    PCA pca_analysis(feature_matrix, Mat(), CV_PCA_DATA_AS_ROW,3);
+    pca_analysis.project(feature_matrix,output_features);
+
+
+
+    // implement K-means -------------------------------------------------------------------------------------------------
+
+    int clusters;
+    string filename = argv[1];
+
+    if(filename == "Comb_2.raw"){
+        clusters = 6;
+    }
+    else{
+        clusters = 4;
+    }
+
+
+
+    Mat labels,centers;
+    kmeans(output_features, clusters, labels,
+            TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 30000, 0.0001),
+               10, KMEANS_RANDOM_CENTERS, centers);
+
+
+    // Reshape labels to a 2D image
+    labels = labels.reshape(0,Sizeh);
+
+    // multiply by multiplication factor to get grayscale image
+    labels = labels * (255/(clusters-1));
+    labels.convertTo(labels, CV_8UC1);
+
+    // Display image
+    namedWindow("Image");
+    imshow("Image",labels);
+    waitKey(0);
+    cvDestroyWindow("Image");
+
+    // Save segmented image
+    imwrite("Segmented_Image.jpg",labels);
+
+
+    return 0;
+}
+// EE569 Homework Assignment #3
+// Date:     Nov 6, 2016
+// Name:     Hariprasad Ravishankar
+// ID:       8991379333
+// Email:    hravisha@usc.edu
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/ximgproc.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include <stdio.h>
+#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+
+using namespace cv;
+using namespace std;
+using namespace cv::ximgproc;
+
+int main(int argc, char *argv[])
+
+{
+
+
+
+	// Read Jeep and Bus Images
+	Mat Image_1 = imread(argv[1]);
+	Mat Image_2 = imread(argv[2]);
+
+
+	// Create SIFT object
+    cv::Ptr<Feature2D> sift_object = xfeatures2d::SIFT::create();
+
+    //SIFT Keypoint vectors
+    std::vector<KeyPoint> SIFT_keypoints1, SIFT_keypoints2;
+    
+    //Detect Keypoints
+    sift_object->detect(Image_1, SIFT_keypoints1);
+	sift_object->detect(Image_2, SIFT_keypoints2);
+    
+	// Display Image with Keypoints
+    Mat outputImage;
+    drawKeypoints(Image_1,SIFT_keypoints1,outputImage);
+    imshow(" Keypoints 1 ", outputImage);
+    imwrite( "SIFT_Keypoints_image1.jpg",outputImage );
+
+    drawKeypoints(Image_2,SIFT_keypoints2,outputImage);
+    imshow(" Keypoints 2", outputImage);
+    imwrite( "SIFT_Keypoints_image2.jpg",outputImage );
+
+    // Compute SIFT descriptors
+    Mat SIFT_descriptors1,SIFT_descriptors2;
+    sift_object->compute(Image_1,SIFT_keypoints1,SIFT_descriptors1);
+    sift_object->compute(Image_2,SIFT_keypoints2,SIFT_descriptors2);
+
+    // Compute Matches
+    vector< DMatch > matches;
+    FlannBasedMatcher matcher;
+    matcher.match(SIFT_descriptors1,SIFT_descriptors2,matches);
+
+    
+	double max_dist = 0; double min_dist = 100;
+
+	// Calculate distance between matched key points
+	for( int i = 0; i < SIFT_descriptors1.rows; i++ ){
+		double dist = matches[i].distance;
+		
+		// Calclulate least distance
+		if( dist < min_dist ){
+			min_dist = dist;
+		} 
+
+		// Caluculate large distances
+		if( dist > max_dist ){
+		 	max_dist = dist;
+		}
+	}
+
+	// Define Dmatch vector to keep good matches
+
+	// Keep Keypoints that are very similar. i.e Euclidean Distance is less than 2*min distance
+	std::vector< DMatch > good_matches;
+
+	for( int i = 0; i < SIFT_descriptors1.rows; i++ ){
+
+		if( matches[i].distance <= (2*min_dist) ){
+	 		
+			good_matches.push_back( matches[i]);
+		}
+	
+	}
+
+	// Draw Matches
+
+
+	// Draw best matches, leave out other keypoints
+
+	drawMatches( Image_1, SIFT_keypoints1, Image_2,SIFT_keypoints2,
+	   good_matches, outputImage, Scalar::all(-1), Scalar::all(-1),
+	   vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+ 
+    imshow(" Image Matches ", outputImage);
+    waitKey(0);
+    imwrite( "SIFT_matches.jpg",outputImage );
+
+
+    return 0;
+}
+// EE569 Homework Assignment #3
+// Date:     Nov 6, 2016
+// Name:     Hariprasad Ravishankar
+// ID:       8991379333
+// Email:    hravisha@usc.edu
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/ximgproc.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include "opencv2/features2d.hpp" 
+#include <stdio.h>
+#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+
+using namespace cv;
+using namespace std;
+using namespace cv::ximgproc;
+
+int main(int argc, char *argv[])
+
+{
+
+
+    // Read Jeep and Bus Images
+	Mat Image_1 = imread(argv[1]);
+	Mat Image_2 = imread(argv[2]);
+
+    // Define Hessian
+    int minHessian = 400;
+
+    // Create SURF object
+    Ptr<Feature2D> detector = xfeatures2d::SURF::create( minHessian );
+
+
+    // Define Keypoints
+    std::vector<KeyPoint> keypoints_1, keypoints_2;
+
+    // Detect Keypoints
+    detector->detect( Image_1, keypoints_1 );
+    detector->detect( Image_2, keypoints_2 );
+
+    //-- Draw keypoints
+    Mat img_keypoints_1; Mat img_keypoints_2;
+
+    drawKeypoints( Image_1, keypoints_1, img_keypoints_1, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
+    drawKeypoints( Image_2, keypoints_2, img_keypoints_2, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
+    
+
+    //-- Show detected (drawn) keypoints
+    imshow("Keypoints 1", img_keypoints_1 );
+    imwrite( "SURF_Keypoints_image1.jpg",img_keypoints_1 );
+    imshow("Keypoints 2", img_keypoints_2 );
+    imwrite( "SURF_Keypoints_image2.jpg",img_keypoints_2 );
+    
+
+    // Compute SURF Descriptor
+    Mat SURF_descriptors1,SURF_descriptors2;
+    detector->compute(Image_1,keypoints_1,SURF_descriptors1);
+    detector->compute(Image_2,keypoints_2,SURF_descriptors2);
+
+
+    // Match Descriptors
+    Mat outputImage;
+    vector< DMatch > matches;
+    FlannBasedMatcher matcher;
+    matcher.match(SURF_descriptors1,SURF_descriptors2,matches);
+
+    double max_dist = 0; double min_dist = 100;
+
+    // Calculate distance between matched key points
+    for( int i = 0; i < SURF_descriptors1.rows; i++ ){
+        double dist = matches[i].distance;
+        
+        // Calclulate least distance
+        if( dist < min_dist ){
+            min_dist = dist;
+        } 
+
+        // Caluculate large distances
+        if( dist > max_dist ){
+            max_dist = dist;
+        }
+    }
+
+    // Define Dmatch vector to keep good matches
+
+    // Keep Keypoints that are very similar. i.e Euclidean Distance is less than 2*min distance
+    std::vector< DMatch > good_matches;
+
+    for( int i = 0; i < SURF_descriptors1.rows; i++ ){
+
+        if( matches[i].distance <= (2*min_dist) ){
+            
+            good_matches.push_back( matches[i]);
+        }
+    
+    }
+
+    // Draw Matches
+ 
+
+    // Draw best matches, leave out other keypoints
+
+    drawMatches( Image_1, keypoints_1, Image_2,keypoints_2,
+       good_matches, outputImage, Scalar::all(-1), Scalar::all(-1),
+       vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+
+    // // Draw matches
+    // drawMatches(Image_1,keypoints_1,Image_2,keypoints_2, matches, outputImage);
+
+
+    imshow(" Matches ", outputImage);
+    waitKey(0);
+
+    imwrite( "SURF_matches.jpg",outputImage );
+
+
+    return 0;
+}
+
+ 
+// EE569 Homework Assignment #3
+// Date:     Nov 6, 2016
+// Name:     Hariprasad Ravishankar
+// ID:       8991379333
+// Email:    hravisha@usc.edu
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/ximgproc.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include <stdio.h>
+#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+#include <unordered_map>
+
+using namespace cv;
+using namespace std;
+using namespace cv::ximgproc;
+
+int main(int argc, char *argv[])
+
+{
+
+
+	// Read all four images
+	Mat Image_1 = imread(argv[1]);
+	Mat Image_2 = imread(argv[2]);
+	Mat Image_3 = imread(argv[3]);
+	Mat Image_4 = imread(argv[4]);
+
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+	// create SIFT object
+    cv::Ptr<Feature2D> sift_object = xfeatures2d::SIFT::create();
+    std::vector<KeyPoint> keypoints1, keypoints2, keypoints3, keypoints4;
+	// ------------------------------------------------------------------------------------------------------------------------------
+    
+
+    // Detect all four SIFT keypoints
+    sift_object->detect(Image_1, keypoints1);
+	sift_object->detect(Image_2, keypoints2);
+	sift_object->detect(Image_3, keypoints3);
+	sift_object->detect(Image_4, keypoints4);
+    
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+
+	// Compute Descriptors for all images
+    Mat descriptors1,descriptors2,descriptors3,descriptors4;
+    sift_object->compute(Image_1,keypoints1,descriptors1);
+    sift_object->compute(Image_2,keypoints2,descriptors2);
+    sift_object->compute(Image_3,keypoints3,descriptors3);
+    sift_object->compute(Image_4,keypoints4,descriptors4);
+
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+    // Concatenate descriptors of first 3 images into ine Matrix
+    Mat tem,features;
+    vconcat(descriptors1,descriptors2,tem);
+    vconcat(tem,descriptors3,features);
+
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+    // Implement K-means to obtain 8 clusters and cluster centroids
+    Mat labels,centers;
+    kmeans(features, 8, labels,
+            TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 30000, 0.00001),
+               10, KMEANS_RANDOM_CENTERS, centers);
+
+ 	// ------------------------------------------------------------------------------------------------------------------------------
+
+    // Declare histogram and assign all zeros
+    vector < Mat > histogram(4);
+    for(int i=0;i<4;i++){
+    	histogram[i] = Mat(8,1,CV_32FC1,Scalar(0));
+
+	}
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+	// Compute histogram for the first 3 images
+
+    for(long int i=0;i<labels.rows;i++){
+    	if (i<descriptors1.rows){
+
+    		histogram[0].at<float>(labels.at<int>(i,0),0)++;
+    	}
+    	else if(i >= descriptors1.rows && i < (descriptors1.rows + descriptors2.rows)){
+    		
+    		histogram[1].at<float>(labels.at<int>(i,0),0)++;
+    	}
+    	else if(i >= (descriptors1.rows + descriptors2.rows) && i < labels.rows){
+
+    		histogram[2].at<float>(labels.at<int>(i,0),0)++;
+    	}
+    }
+
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+    // Compute histogram for test image
+    Mat squared;
+    vector <float> dist;
+
+   	// Use Euclidean distance for distance metric
+    for(long int i=0; i<descriptors4.rows ; i++){
+
+    	for(int j=0;j< centers.rows;j++){
+    		pow((descriptors4.row(i) - centers.row(j)),2,squared);
+    		dist.push_back(sum(squared)[0]);
+    	}
+
+    	histogram[3].at<float>((min_element(dist.begin(),dist.end()) - dist.begin()),0)++; // finds min location
+    	dist.clear();
+    }
+
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+    // Compare histograms based on Euclidean distance 
+    for(long int i=0; i< 3 ; i++){
+
+    	pow(histogram[3] - histogram[i],2,squared);
+    	dist.push_back(sum(squared)[0]);
+
+    }
+
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+    // Determine closest match
+    int classification_label;
+    classification_label = (min_element(dist.begin(),dist.end()) - dist.begin());
+    cout<< "closest image is " <<argv[classification_label+1]<<endl;
+
+
+    // Display matched image
+	Mat MatchedImage = imread(argv[classification_label+1]);
+    imshow(" Matched Image ", MatchedImage );
+    waitKey(0);
+
+	// ------------------------------------------------------------------------------------------------------------------------------
+
+    return 0;
+}
+
+     
+   
+   
+   

@@ -1,0 +1,3 @@
+/home/hariprasad/Downloads/Homework 3/EE569_hw3_8991379333_Ravishankar/P1/Texture_Classification/CMakeFiles/rebuild_cache.dir
+/home/hariprasad/Downloads/Homework 3/EE569_hw3_8991379333_Ravishankar/P1/Texture_Classification/CMakeFiles/edit_cache.dir
+/home/hariprasad/Downloads/Homework 3/EE569_hw3_8991379333_Ravishankar/P1/Texture_Classification/CMakeFiles/p1a_TextureClassification.dir
